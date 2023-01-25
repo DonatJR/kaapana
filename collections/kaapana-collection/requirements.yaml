@@ -58,4 +58,5 @@ dependencies:
     version: 0.0.0
   - name: total-segmentator-workflow
     version: 0.0.0
-    
+  - name: m2olie-workbench-chart
+    version: 0.0.0
