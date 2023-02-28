@@ -100,6 +100,8 @@ spec:
           mountPath: /kaapana/mounted/workflows/plugins
         - name: airflow-dags
           mountPath: /kaapana/mounted/workflows/dags
+        # - name: ssh-key-path
+        #   mountPath: /root/.ssh
         # readinessProbe:
         #   initialDelaySeconds: 120
         #   timeoutSeconds: 5

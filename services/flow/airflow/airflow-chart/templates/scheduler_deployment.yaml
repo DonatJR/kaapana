@@ -112,6 +112,12 @@ spec:
           value: "{{ .Values.global.hostname }}"
         - name: HTTPS_PORT
           value: "{{ .Values.global.https_port }}"
+        - name: http_proxy
+          value: {{ .Values.global.http_proxy }}
+        - name: https_proxy
+          value: {{ .Values.global.http_proxy }}
+        - name: no_proxy
+          value: .svc
         - name: INSTANCE_ID
           value: "{{ .Values.global.instance_id }}"
         - name: INSTANCE_NAME
@@ -130,12 +136,6 @@ spec:
           value: "{{ .Values.global.fast_data_dir }}/workflows/models"
         - name: PROXY
           value: "{{ .Values.global.http_proxy }}"
-        - name: http_proxy
-          value: {{ .Values.global.http_proxy }}
-        - name: https_proxy
-          value: {{ .Values.global.http_proxy }}
-        - name: no_proxy
-          value: ".svc,.svc.cluster,.svc.cluster.local"
         - name: PULL_POLICY_IMAGES
           value: "{{ .Values.global.pull_policy_images }}"
         - name: SERVICES_NAMESPACE
@@ -170,6 +170,10 @@ spec:
           mountPath: /kaapana/mounted/workflows/data
         - name: dicomdir
           mountPath: /kaapana/mounted/pacsdata
+        - name: minio-data
+          mountPath: /kaapana/mounted/minio
+        # - name: ssh-key-path
+        #   mountPath: /root/.ssh
       volumes:
       - name: airflow-configmap
         configMap:
@@ -192,6 +196,9 @@ spec:
       - name: modeldata
         persistentVolumeClaim:
           claimName: models-pv-claim
+      - name: minio-data
+        persistentVolumeClaim:
+          claimName: minio-pv-claim
       - name: ctpinput
         persistentVolumeClaim:
           claimName: ctp-data-pv-claim
