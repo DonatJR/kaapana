@@ -1,6 +1,6 @@
 
 <template lang="pug">
-v-dialog(v-model='dialogOpen' max-width='600px')
+v-dialog(v-model='dialogOpen' max-width='650px')
   template(v-slot:activator='{ on, attrs }')
     v-btn(x-large color="primary" v-bind='attrs' v-on='on' dark)
       v-icon(class="mx-2" x-large) mdi-play-circle
@@ -41,6 +41,42 @@ v-dialog(v-model='dialogOpen' max-width='600px')
           //- Data- and Workflow forms
           v-row(v-if="experiment_name")
             //- :rules="dataformRules" required)
+            v-col(cols='12') 
+             <v-radio-group v-model="workflow_type" row>
+               <template v-slot:label>
+                 <div>Workflow Type:</div> 
+                   
+               </template>
+               <v-radio value="dags">
+                 <template v-slot:label>
+                   <div>DAG</div>
+                 </template>
+               </v-radio>
+               <v-radio value="shell_workflow">
+                 <template v-slot:label>
+                   <div>Shell (isolation)</div>
+                 </template>
+               </v-radio>
+               <v-radio value="container_workflow">
+                 <template v-slot:label>
+                   <div>Container (isolation)</div>
+                 </template>
+               </v-radio>
+             </v-radio-group>
+            v-col(v-if="workflow_type =='shell_workflow'" cols='12')
+              v-select(v-model='bucket_id' :items='final_available_datasets' label='Choose Dataset' chips='')
+              v-text-field(v-model='download_url' label='Enter URL to download shell script and supporting files (.zip format)' required='')
+            
+            v-col(v-if="workflow_type=='container_workflow'" cols='12')
+              v-select(v-model='bucket_id' :items='final_available_datasets' label='Choose Dataset' chips='')
+              v-text-field(v-model='container_registry_url' label='Enter container registry URL' required='')
+              v-text-field(v-model='container_registry_user' label='Enter container registry username' required='')
+              v-text-field(v-model='container_registry_pwd' label='Enter container registry password' type='password' required='')
+              v-text-field(v-model='container_name_version' label='Enter container name:version' required='')
+             
+            v-col(v-if="instance_names.length && workflow_type!=='shell_workflow' && workflow_type!=='container_workflow' " cols='12')
+              v-select(v-model='dag_id' :items='available_dags' label='Dags' chips='' hint='Select a dag')
+            //- v-if="!(remote==false && name=='federated_form')"
             v-col(v-for="(schema, name) in schemas" cols='12')
               p {{name}}
               //- v-jsf(v-model="formData[name]" :schema="schema" v-bind:class="{ 'is-invalid': !validateFormData(schema, formData[name]) }" required)
@@ -65,6 +101,13 @@ v-dialog(v-model='dialogOpen' max-width='600px')
                 pre.text-left Dag id: {{dag_id}}
                 pre.text-left Instance name: {{instance_names}}
                 pre.text-left External instance name: {{external_instance_names}}
+                pre.text-left Workflow Type: {{workflow_type}}
+                pre.text-left Bash Url: {{download_url}}
+                pre.text-left Bucket ID: {{bucket_id}}
+                pre.text-left Container Registry URL: {{container_registry_url}}
+                pre.text-left Registry User: {{container_registry_user}}
+                pre.text-left Registry Pwd: {{container_registry_pwd}}
+                pre.text-left Container name:version: {{container_name_version}}
                 pre.text-left {{ formDataFormatted }}
       v-card-actions
         v-btn(color="primary", @click="submissionValidator()"  dark) Start Experiment
@@ -76,6 +119,7 @@ import kaapanaApiService from "@/common/kaapanaApi.service";
 import VJsf from "@koumoul/vjsf/lib/VJsf.js";
 import "@koumoul/vjsf/lib/VJsf.css";
 import "@koumoul/vjsf/lib/deps/third-party.js";
+import request from '@/request';
 
 export default {
   name: "WorkflowExecution",
@@ -89,6 +133,8 @@ export default {
     external_schemas: {}, // changed from {} to [] since we're getting a string and no object
     formData: {},
     available_dags: [],
+    available_minio_buckets: [],
+    available_meta_cohorts: [],
     instance_names: [],
     external_instance_names: [],
     external_dag_id: null,
@@ -97,6 +143,7 @@ export default {
     dag_id: null,
     experiment_name: '',
     experiment_id: null, // Math.random().toString(20).substr(2, 6), // new Date().getTime(),
+    bucket_id: null,
     showConfData: false,
     federated_data: false,
     remote_data: false,
@@ -104,7 +151,13 @@ export default {
     form_requiredFields: [],
     my_form_validation: false,
     form_validation_cohort_name: false,
-    form_validation_method_confirmation: false
+    form_validation_method_confirmation: false,
+    workflow_type: 'dags',
+    download_url: null,
+    container_registry_url: null,
+    container_registry_user: null,
+    container_registry_pwd: null,
+    container_name_version: null
   }),
   props: {
     remote: {
@@ -125,6 +178,10 @@ export default {
   computed: {
     available_instance_names () {
       return this.instances.map(({ instance_name }) => instance_name);
+    },
+    final_available_datasets () {
+      console.log("Final_available_datasets: ", [...this.available_minio_buckets, ...this.available_meta_cohorts])
+      return [...this.available_minio_buckets, ...this.available_meta_cohorts]
     },
     formDataFormatted () {
       return this.formatFormData(this.formData)
@@ -168,6 +225,8 @@ export default {
     },
     instance_names() {
       this.getDags()
+      this.getMinioBuckets()
+      this.getCohorts()
       this.resetFormData()
       this.getRemoteInstanceNames()
     },
@@ -289,6 +348,30 @@ export default {
           });
       }
     },
+    getMinioBuckets() {
+      kaapanaApiService
+        .minioApiget("/buckets")
+        .then((response) => {
+          this.response = response.data
+          const keyName = 'name';
+          this.available_minio_buckets = this.response.map(item => item[keyName]);
+          //console.log("Available Buckets:", this.available_minio_buckets)
+        
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    },
+    getCohorts() {
+      kaapanaApiService
+        .federatedClientApiGet("/cohort-names")
+        .then((response) => {
+          this.available_meta_cohorts = response.data        
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    },
     getAvailableExternalNodeIds() {
       kaapanaApiService
         .federatedClientApiPost("/get-remote-kaapana-instances", {dag_id: this.external_dag_id})
@@ -380,6 +463,35 @@ export default {
       }
     },
     submitWorkflow() {
+      if ((this.workflow_type == "shell_workflow") || (this.workflow_type == "container_workflow" )) {
+        console.log("TFDA Main Dag Called"
+        );
+        
+        request.post("/flow/kaapana/api/trigger/dag-tfda-testing-workflow", {
+            
+            'conf': {
+            experiment_name: this.experiment_name,
+            //dag_id: this.dag_id,
+            instance_names: this.instance_names, 
+            workflow_type: this.workflow_type,
+            download_url: this.download_url,
+            bucket_id: this.bucket_id,
+            container_registry_url: this.container_registry_url,
+            container_registry_user: this.container_registry_user,
+            container_registry_pwd: this.container_registry_pwd,         
+            container_name_version: this.container_name_version
+            //conf_data: this.formatFormData(this.formData),
+            //remote: this.remote_data,
+            //federated: this.federated_data,
+          },
+          })
+          .then((response) => {
+            this.response = JSON.stringify(response.data);
+          })
+          .catch((err) => {
+            console.log(err);
+          });}
+      else {
       // modify attributes remote_data and federated_data depending on instances 
       this.federated_data = false;
       if ((this.instance_names.indexOf(this.clientinstance.instance_name) != -1) && (this.instance_names.length == 1)) {
@@ -410,7 +522,7 @@ export default {
           console.log(err);
         });
     }
-  }
+  } }
 };
 </script>
 
