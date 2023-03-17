@@ -27,10 +27,6 @@ v-dialog(v-model='dialogOpen' max-width='650px')
               v-col(align="left")
                 //- switch_label() also adds client_instance to instance_names
                 p(class="text-body-1") {{ switch_label() }}
-          //- DAG: select dag
-          v-row
-            v-col(v-if="instance_names.length" cols='12')
-              v-select(v-model='dag_id' :items='available_dags' label='DAGs' chips='' hint='Select a dag' :rules="dagRules" required)
           //- Experiment name
           v-row(v-if="dag_id")
             v-col(cols='12')
@@ -64,18 +60,21 @@ v-dialog(v-model='dialogOpen' max-width='650px')
                </v-radio>
              </v-radio-group>
             v-col(v-if="workflow_type =='shell_workflow'" cols='12')
+              v-text-field(v-model='experiment_name' label='Experiment name' required='')
               v-select(v-model='bucket_id' :items='final_available_datasets' label='Choose Dataset' chips='')
               v-text-field(v-model='download_url' label='Enter URL to download shell script and supporting files (.zip format)' required='')
             
             v-col(v-if="workflow_type=='container_workflow'" cols='12')
+              v-text-field(v-model='experiment_name' label='Experiment name' required='')
               v-select(v-model='bucket_id' :items='final_available_datasets' label='Choose Dataset' chips='')
               v-text-field(v-model='container_registry_url' label='Enter container registry URL' required='')
               v-text-field(v-model='container_registry_user' label='Enter container registry username' required='')
               v-text-field(v-model='container_registry_pwd' label='Enter container registry password' type='password' required='')
               v-text-field(v-model='container_name_version' label='Enter container name:version' required='')
-             
+
+            //- DAG: select dag
             v-col(v-if="instance_names.length && workflow_type!=='shell_workflow' && workflow_type!=='container_workflow' " cols='12')
-              v-select(v-model='dag_id' :items='available_dags' label='Dags' chips='' hint='Select a dag')
+               v-select(v-model='dag_id' :items='available_dags' label='DAGs' chips='' hint='Select a dag' :rules="dagRules" required)
             //- v-if="!(remote==false && name=='federated_form')"
             v-col(v-for="(schema, name) in schemas" cols='12')
               p {{name}}
