@@ -87,6 +87,8 @@ spec:
           value: "http://prometheus-service.{{  .Values.global.services_namespace  }}.svc:9090/prometheus"
         - name: KEYCLOAK_URL
           value: "https://keycloak-internal-service.{{  .Values.global.admin_namespace  }}.svc/auth/"
+        - name: DCM4CHEE_URL
+          value: "https://dcm4chee-service.{{  .Values.global.admin_namespace  }}.svc:8080/dcm4chee-arc/aets/KAAPANA/rs/"
         - name: MINIO_USERNAME
           value: {{ .Values.global.credentials_minio_username  | default "" }}
         - name: MINIO_PASSWORD

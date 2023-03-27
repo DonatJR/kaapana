@@ -11,6 +11,7 @@ from .monitoring import routers as monitoring
 from .storage import routers as storage
 from .users import routers as users
 from .workflows import routers as workflows
+from .m2olie import routers as m2olie
 
 from .dependencies import get_query_token, get_token_header
 from .database import SessionLocal, engine
@@ -27,24 +28,26 @@ logging.getLogger().setLevel(logging.INFO)
 # app = FastAPI()
 app = FastAPI()
 
+
 @app.on_event("startup")
-@repeat_every(seconds=float(os.getenv('REMOTE_SYNC_INTERVAL', 2.5)))
+@repeat_every(seconds=float(os.getenv("REMOTE_SYNC_INTERVAL", 2.5)))
 def periodically_get_remote_updates():
     with SessionLocal() as db:
         try:
             get_remote_updates(db, periodically=True)
         except Exception as e:
-            logging.warning('Something went wrong updating')
+            logging.warning("Something went wrong updating")
             logging.warning(traceback.format_exc())
 
+
 @app.on_event("startup")
-@repeat_every(seconds=float(os.getenv('REMOTE_SYNC_INTERVAL', 2.5)))
+@repeat_every(seconds=float(os.getenv("REMOTE_SYNC_INTERVAL", 2.5)))
 def periodically_sync_states_from_airflow():
     with SessionLocal() as db:
         try:
             sync_states_from_airflow(db, periodically=True)
         except Exception as e:
-            logging.warning('Something went wrong updating')
+            logging.warning("Something went wrong updating")
             logging.warning(traceback.format_exc())
 
 
@@ -65,22 +68,13 @@ app.include_router(
 )
 
 # Not used yet
-app.include_router(
-    monitoring.router,
-    prefix="/monitoring"
-)
+app.include_router(monitoring.router, prefix="/monitoring")
 
 # Not used yet
-app.include_router(
-    users.router,
-    prefix="/users"
-)
+app.include_router(users.router, prefix="/users")
 
 # Not used yet
-app.include_router(
-    storage.router,
-    prefix="/storage"
-)
+app.include_router(storage.router, prefix="/storage")
 
 # Not used yet, probably overlap with client url
 app.include_router(
@@ -88,3 +82,6 @@ app.include_router(
     prefix="/workflows",
     responses={418: {"description": "workflows"}},
 )
+
+
+app.include_router(m2olie.router, prefix="/m2olie")
