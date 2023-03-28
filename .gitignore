@@ -27,3 +27,4 @@ build-scripts/build-config.yaml
 platform_config.yaml
 platform_config.json
 request_config.yaml
+h.sh
