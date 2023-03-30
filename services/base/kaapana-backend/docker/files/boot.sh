@@ -1,4 +1,4 @@
-alembic init alembic
+alembic init -t async alembic
 cp env.py /kaapana/app/alembic/env.py
 alembic revision --autogenerate -m "Migration"
 alembic upgrade head

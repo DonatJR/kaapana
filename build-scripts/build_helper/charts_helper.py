@@ -266,7 +266,7 @@ def helm_registry_login(username, password):
         "--password",
         password,
     ]
-    output = run(command, stdout=PIPE, stderr=PIPE, universal_newlines=True, timeout=10)
+    output = run(command, stdout=PIPE, stderr=PIPE, universal_newlines=True, timeout=30)
 
     if output.returncode != 0:
         BuildUtils.logger.error("Something went wrong!")

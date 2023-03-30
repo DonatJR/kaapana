@@ -8,10 +8,10 @@ else
 fi
 bsdocker_registry=""
 image=""
-version=""
+version=$(git describe)
 project=""
-default_registry="" # eg 'registry.hzdr.de/kaapana'
-default_project="" # eg '/kaapana'
+default_registry="registry.hzdr.de/philipp.schader" # eg 'registry.hzdr.de/kaapana'
+default_project="/kaapana" # eg '/kaapana'
 while IFS= read -r line;
 do
     if [[ $line == *"LABEL IMAGE="* ]]; then
@@ -26,10 +26,10 @@ do
         docker_registry=${line#*=}
         docker_registry=$(sed -e "s/\"//g" -e "s/\'//g" <<<"$docker_registry")
     fi
-    if [[ $line == *"LABEL VERSION"* ]]; then
-        version=${line#*=}
-        version=$(sed -e "s/\"//g" -e "s/\'//g" <<<"$version")
-    fi
+#    if [[ $line == *"LABEL VERSION"* ]]; then
+#        version=${line#*=}
+#        version=$(sed -e "s/\"//g" -e "s/\'//g" <<<"$version")
+#    fi
     if [[ $line == *"LABEL CI_IGNORE"* ]]; then
         ci_ignore=${line#*=}
         ci_ignore=$(sed -e "s/\"//g" -e "s/\'//g" <<<"$ci_ignore")

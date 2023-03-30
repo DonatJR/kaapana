@@ -7,7 +7,7 @@ httpx==0.22.0
 minio==7.1.2
 uvicorn==0.17.4
 prometheus-api-client==0.4.2
-psycopg2-binary==2.9.3
+asyncpg==0.27.0
 python-keycloak==2.9.0
 python-multipart==0.0.5
 pytest==7.0.0

@@ -9,10 +9,10 @@ from typing import List
 import requests
 from cryptography.fernet import Fernet
 from fastapi import HTTPException, Response
-from psycopg2.errors import UniqueViolation
 from sqlalchemy import desc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from sqlalchemy.future import select
 from urllib3.util import Timeout
 
 from app.config import settings
@@ -28,7 +28,7 @@ TIMEOUT = Timeout(TIMEOUT_SEC)
 
 
 def delete_kaapana_instance(db: Session, kaapana_instance_id: int):
-    db_kaapana_instance = db.query(models.KaapanaInstance).filter_by(id=kaapana_instance_id).first()
+    db_kaapana_instance = (await db.select(models.KaapanaInstance).where(models.KaapnaInstance.id == kaapana_instance_id)).first()
     if not db_kaapana_instance:
         raise HTTPException(status_code=404, detail="Kaapana instance not found")
     db.delete(db_kaapana_instance)
@@ -201,7 +201,7 @@ def create_job(db: Session, job: schemas.JobCreate):
     try:
         db.commit()  # writing, if kaapana_id and external_job_id already exists will fail due to duplicate error
     except IntegrityError as e:
-        assert isinstance(e.orig, UniqueViolation)  # proves the original exception
+        #assert isinstance(e.orig, UniqueViolation)  # proves the original exception
         return db.query(models.Job).filter_by(external_job_id=db_job.external_job_id,
                                               owner_kaapana_instance_name=db_job.owner_kaapana_instance_name).first()
 
@@ -647,19 +647,23 @@ def create_cohort(db: Session, cohort: schemas.CohortCreate):
     return db_cohort
 
 
-def get_cohort(db: Session, cohort_name: str):
-    db_cohort = db.query(models.Cohort).filter_by(cohort_name=cohort_name).first()
+async def get_cohort(db: Session, cohort_name: str):
+    db_cohort = (await db.execute(select(models.Cohort).where(models.Cohort.cohort_name == cohort_name))).first()
     if not db_cohort:
         raise HTTPException(status_code=404, detail="Cohort not found")
     return db_cohort
 
 
-def get_cohorts(db: Session, instance_name: str = None, limit=None, as_list: bool = True, username: str = None):
+async def get_cohorts(db: Session, instance_name: str = None, limit=None, as_list: bool = True, username: str = None):
     logging.info(username)
     if username is not None:
-        db_cohorts = db.query(models.Cohort).filter_by(username=username).join(models.Cohort.kaapana_instance,
-                                                                               aliased=True).order_by(
-            desc(models.Cohort.time_updated)).limit(limit).all()
+        db_cohorts = (await db.execute(
+            select(models.Cohort)
+                .where(models.Cohort.username == username)
+                .join(models.Cohort.kaapana_instance) # TODO, aliased=True)
+                .order_by(desc(models.Cohort.time_updated))
+                .limit(limit))).all()
+        logging.info(db_cohorts)
     else:
         db_cohorts = db.query(models.Cohort).join(models.Cohort.kaapana_instance, aliased=True).order_by(
             desc(models.Cohort.time_updated)).limit(limit).all()
