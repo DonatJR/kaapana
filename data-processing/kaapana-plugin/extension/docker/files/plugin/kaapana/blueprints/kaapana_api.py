@@ -30,9 +30,6 @@ Represents a blueprint kaapanaApi
 """
 kaapanaApi = Blueprint('kaapana', __name__, url_prefix='/kaapana')
 
-with app.app_context():
-    app.json.sort_keys = False
-
 @csrf.exempt
 @kaapanaApi.route('/api/trigger/<string:dag_id>', methods=['POST'])
 def trigger_dag(dag_id):
@@ -298,6 +295,8 @@ def getAllDagRuns():
 @kaapanaApi.route('/api/getdags', methods=['GET'])
 @csrf.exempt
 def get_dags_endpoint():
+    with app.app_context():
+        app.json.sort_keys = False
     ids_only = request.args.get('ids_only')
     active_only = request.args.get('active_only')
     session = settings.Session()
